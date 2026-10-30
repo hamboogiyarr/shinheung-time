@@ -1,0 +1,864 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="해방촌 신흥시장의 세 자리에서 1950년부터 2056년까지 다섯 시대를 걸어 보는 AI 탐방 웹사이트.">
+<meta property="og:title" content="신흥시장 시간산책">
+<meta property="og:description" content="같은 자리, 일흔 해. AI로 다시 걸어 본 해방촌 신흥시장.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#141210">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23141210'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%23f2c14e'/%3E%3C/svg%3E">
+<style>html{-webkit-text-size-adjust:100%}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}</style>
+</head>
+<body>
+<title>신흥시장 시간산책</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Gothic+A1:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: 인트로 → 큰 '현장' 화면 + 조작 막대 + 시대 레일 + 옆 패널 → 엔딩. 세로 녹화 모드는 9:16 전체화면. 밤 골목의 노란 전구와 벽돌색 */
+:root{
+  --bg:#141210;
+  --panel:#1d1a17;
+  --line:#3a332c;
+  --fg:#efe8de;
+  --muted:#a89d8f;
+  --bulb:#f2c14e;
+  --brick:#c0603f;
+  --f-display:"Do Hyeon","Gothic A1",system-ui,sans-serif;
+  --f-body:"Gothic A1","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--f-body);font-size:15px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+button{font-family:var(--f-body)}
+button:focus-visible,select:focus-visible,.hs:focus-visible{outline:2px solid var(--bulb);outline-offset:2px}
+
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 20px}
+h1{font-family:var(--f-display);font-weight:400;font-size:clamp(28px,4.4vw,44px);line-height:1.1;margin:0;letter-spacing:.01em;text-wrap:balance}
+h1 em{font-style:normal;color:var(--bulb)}
+.sub{color:var(--muted);font-size:13px;margin:0}
+.addr{font-family:var(--f-mono);font-size:12px;color:var(--muted);letter-spacing:.04em}
+
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.main{display:flex;flex-direction:column;gap:12px;min-width:0}
+
+/* ── 현장 화면 ── */
+.stage{position:relative;aspect-ratio:3/2;max-width:100%;border-radius:6px;overflow:hidden;background:#000;isolation:isolate;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.stage .layer{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .8s ease;transform-origin:50% 60%}
+.stage .layer.out{opacity:0}
+.kb{animation:kb 11s ease-out forwards}
+@keyframes kb{from{transform:scale(1)}to{transform:scale(1.07)}}
+
+.tag{position:absolute;left:12px;top:12px;display:flex;gap:6px;flex-wrap:wrap;z-index:3;pointer-events:none}
+.chip{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;padding:4px 8px;border-radius:3px;background:rgba(10,9,8,.72);color:var(--fg);backdrop-filter:blur(4px)}
+.chip.ai{background:var(--brick);color:#fff}
+
+.nav{position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:46px;height:46px;border-radius:50%;
+  border:1px solid rgba(255,255,255,.35);background:rgba(10,9,8,.55);color:#fff;font-size:22px;cursor:pointer;display:grid;place-items:center;backdrop-filter:blur(4px)}
+.nav:hover{background:rgba(10,9,8,.8);border-color:var(--bulb)}
+.nav.prev{left:12px}.nav.next{right:12px}
+.nav[disabled]{opacity:.25;cursor:default}
+
+.hs{position:absolute;z-index:2;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:2px solid #fff;
+  background:var(--bulb);cursor:pointer;animation:pulse 2.2s infinite}
+.hs.on{background:var(--brick);animation:none}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(242,193,78,.55)}70%{box-shadow:0 0 0 14px rgba(242,193,78,0)}100%{box-shadow:0 0 0 0 rgba(242,193,78,0)}}
+
+.pop{position:absolute;z-index:4;left:12px;right:12px;bottom:12px;max-width:440px;background:rgba(20,18,16,.92);border:1px solid var(--line);
+  border-radius:6px;padding:12px 14px;backdrop-filter:blur(6px)}
+.pop h3{margin:0 0 4px;font-family:var(--f-display);font-weight:400;font-size:19px;color:var(--bulb)}
+.pop p{margin:0;font-size:14px}
+.pop .x{position:absolute;right:6px;top:4px;background:none;border:0;color:var(--muted);font-size:20px;cursor:pointer}
+
+.flash{position:absolute;inset:0;display:grid;place-items:center;z-index:2;pointer-events:none;opacity:0;
+  font-family:var(--f-display);font-size:clamp(64px,13vw,150px);color:#fff;text-shadow:0 4px 30px rgba(0,0,0,.6);letter-spacing:.02em}
+.flash.show{animation:flash 1.3s ease-out}
+@keyframes flash{0%{opacity:0;transform:scale(.96)}25%{opacity:.92;transform:scale(1)}100%{opacity:0;transform:scale(1.03)}}
+
+.stage-cap{position:absolute;left:0;right:0;bottom:0;z-index:3;padding:40px 18px 16px;pointer-events:none;
+  background:linear-gradient(transparent,rgba(0,0,0,.75));font-size:clamp(15px,2vw,20px);font-weight:700;text-wrap:balance}
+.stage-cap small{display:block;font-family:var(--f-mono);font-weight:400;font-size:12px;color:var(--bulb);letter-spacing:.08em;margin-bottom:2px}
+
+/* 비교 모드 */
+.cmp{position:absolute;inset:0;z-index:2}
+.cmp img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;clip-path:inset(0 0 0 var(--p,50%))}
+.cmp-line{position:absolute;top:0;bottom:0;left:var(--p,50%);width:2px;margin-left:-1px;background:var(--bulb);z-index:3}
+.cmp-line::after{content:"‹ ›";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;
+  background:var(--bulb);color:#1a1408;display:grid;place-items:center;font-weight:700;font-size:16px;letter-spacing:2px}
+.cmp-lab{position:absolute;bottom:12px;z-index:3;font-family:var(--f-display);font-size:26px;color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.7);pointer-events:none}
+.cmp-lab.l{left:14px}.cmp-lab.r{right:14px}
+.stage.comparing{touch-action:none;cursor:ew-resize}
+.stage.comparing .layer{animation:none;transform:none}
+.stage.comparing #hotspots,.stage.comparing .nav,.stage.comparing .pop{display:none}
+
+/* 조작 막대 */
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ctl{background:var(--panel);border:1px solid var(--line);color:var(--fg);border-radius:999px;padding:7px 14px;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:6px}
+.ctl:hover{border-color:var(--bulb)}
+.ctl[aria-pressed="true"]{border-color:var(--bulb);color:var(--bulb)}
+.ctl.primary{background:var(--bulb);border-color:var(--bulb);color:#1a1408;font-weight:700;margin-left:auto}
+.ctl .dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+.cmp-sel{display:inline-flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
+.cmp-sel select{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:5px 6px;font-family:var(--f-mono)}
+@media (max-width:560px){.ctl.primary{margin-left:0}}
+
+.eras{display:flex;flex-direction:column;gap:10px}
+.track{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.era-btn{background:var(--panel);border:1px solid var(--line);color:var(--fg);border-radius:4px;padding:8px 6px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
+.era-btn b{font-family:var(--f-mono);font-weight:500;font-size:14px;font-variant-numeric:tabular-nums}
+.era-btn span{font-size:11px;color:var(--muted);text-align:center}
+.era-btn[aria-pressed="true"]{border-color:var(--bulb);background:#2a2316}
+.era-btn[aria-pressed="true"] b{color:var(--bulb)}
+.era-note{margin:0;color:var(--muted);font-size:14px;max-width:70ch}
+.era-note strong{color:var(--fg);font-weight:700}
+
+aside{display:flex;flex-direction:column;gap:14px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px}
+.label{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.spot-no{font-family:var(--f-mono);color:var(--bulb);font-size:13px}
+.spot-name{font-family:var(--f-display);font-weight:400;font-size:24px;margin:2px 0 6px;line-height:1.2}
+.spot-desc{margin:0;font-size:14px}
+svg.map{width:100%;height:auto;display:block}
+.map .route{fill:none;stroke:var(--line);stroke-width:14;stroke-linecap:round;stroke-linejoin:round}
+.map .route-in{fill:none;stroke:var(--brick);stroke-width:2;stroke-dasharray:4 5}
+.map circle{fill:var(--panel);stroke:var(--muted);stroke-width:1.5;cursor:pointer}
+.map circle.on{fill:var(--bulb);stroke:var(--bulb)}
+.map text{fill:var(--muted);font-family:var(--f-mono);font-size:9px;pointer-events:none}
+.map text.num{fill:var(--fg)}
+.map .cap{font-size:8px}
+.hint{font-size:12px;color:var(--muted);margin:8px 0 0}
+kbd{font-family:var(--f-mono);font-size:11px;border:1px solid var(--line);border-radius:3px;padding:0 4px}
+.thumbs{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.thumbs button{padding:0;border:2px solid transparent;border-radius:3px;overflow:hidden;cursor:pointer;background:none;aspect-ratio:3/2}
+.thumbs button[aria-pressed="true"]{border-color:var(--bulb)}
+.thumbs img{width:100%;height:100%;object-fit:cover;display:block}
+footer{color:var(--muted);font-size:12px;border-top:1px solid var(--line);padding-top:12px}
+
+/* ── 인트로 · 엔딩 ── */
+.veil{position:fixed;inset:0;z-index:40;display:flex;align-items:flex-end;background:#000;
+  padding:max(24px,env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) max(28px,env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px))}
+.veil-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.75;animation:kb 14s ease-out forwards}
+.veil::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.15) 30%,rgba(0,0,0,.85))}
+.veil-in{position:relative;z-index:1;max-width:620px;display:flex;flex-direction:column;gap:12px}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.14em;color:var(--bulb);margin:0}
+.veil h2{font-family:var(--f-display);font-weight:400;font-size:clamp(40px,8vw,84px);line-height:1.02;margin:0;color:#fff;text-wrap:balance}
+.veil p.lede{margin:0;color:#e2d9cc;font-size:16px;max-width:46ch}
+.veil-btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+.vbtn{border-radius:999px;padding:11px 20px;font-size:15px;cursor:pointer;border:1px solid rgba(255,255,255,.5);background:rgba(0,0,0,.3);color:#fff;backdrop-filter:blur(4px)}
+.vbtn.main{background:var(--bulb);border-color:var(--bulb);color:#1a1408;font-weight:700}
+.vbtn:hover{border-color:var(--bulb)}
+.veil .fine{font-size:12px;color:#b9ad9e;margin:4px 0 0}
+
+/* ── 세로 녹화 모드 ── */
+.rec{position:fixed;inset:0;z-index:60;background:#000;display:grid;place-items:center}
+.rec-frame{position:relative;height:100%;aspect-ratio:9/16;max-width:100%;overflow:hidden;background:#000;container-type:size;cursor:pointer}
+.rec-frame .layer{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .9s ease;transform-origin:50% 55%}
+.rec-frame .layer.out{opacity:0}
+.rec-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.55) 0%,transparent 26%,transparent 58%,rgba(0,0,0,.8) 100%);pointer-events:none}
+.rec-bars{position:absolute;top:max(14px,env(safe-area-inset-top,0px));left:14px;right:14px;display:flex;gap:5px;z-index:3}
+.rec-bars i{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.3);overflow:hidden}
+.rec-bars i b{display:block;height:100%;width:0;background:#fff;transition:width .5s ease}
+.rec-top{position:absolute;top:calc(max(14px,env(safe-area-inset-top,0px)) + 18px);left:6cqw;right:6cqw;z-index:3;color:#fff}
+.rec-spot{font-family:var(--f-mono);font-size:13px;font-size:3.4cqw;letter-spacing:.1em;color:var(--bulb)}
+.rec-year{font-family:var(--f-display);font-size:72px;font-size:24cqw;line-height:.95;text-shadow:0 4px 24px rgba(0,0,0,.5)}
+.rec-era{font-family:var(--f-display);font-size:24px;font-size:7cqw;opacity:.92}
+.rec-year.tick{animation:tick .7s ease-out}
+@keyframes tick{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.rec-cap{position:absolute;left:6cqw;right:6cqw;bottom:calc(max(18px,env(safe-area-inset-bottom,0px)) + 30px);z-index:3;color:#fff;
+  font-weight:700;font-size:20px;font-size:5.6cqw;line-height:1.35;text-wrap:balance}
+.rec-ai{position:absolute;right:6cqw;bottom:max(14px,env(safe-area-inset-bottom,0px));z-index:3;font-family:var(--f-mono);font-size:11px;font-size:2.8cqw;color:rgba(255,255,255,.75);letter-spacing:.06em}
+.rec-card{position:absolute;inset:0;z-index:4;display:flex;flex-direction:column;justify-content:center;gap:2cqh;padding:0 8cqw;color:#fff;background:rgba(0,0,0,.45)}
+.rec-card small{font-family:var(--f-mono);font-size:3.4cqw;letter-spacing:.14em;color:var(--bulb)}
+.rec-card b{font-family:var(--f-display);font-weight:400;font-size:13cqw;line-height:1.05}
+.rec-card span{font-size:4.2cqw;color:#e8dfd2}
+.rec-x{position:fixed;top:max(10px,env(safe-area-inset-top,0px));right:max(10px,env(safe-area-inset-right,0px));z-index:61;width:40px;height:40px;border-radius:50%;
+  border:1px solid rgba(255,255,255,.4);background:rgba(0,0,0,.4);color:#fff;font-size:20px;cursor:pointer;transition:opacity .6s}
+.rec-x.dim{opacity:.18}
+.rec-x.dim:hover,.rec-x.dim:focus-visible{opacity:1}
+
+/* 숨은 물건 찾기 */
+.stage.hunting{cursor:crosshair}
+.stage.hunting #hotspots{display:none}
+.stage.hunting .layer{animation:none;transform:none}
+.hunt-chip{position:absolute;right:12px;top:12px;z-index:3;pointer-events:none;font-size:13px;font-weight:700;padding:6px 10px;border-radius:999px;background:var(--bulb);color:#1a1408}
+.hunt-chip small{font-family:var(--f-mono);font-weight:500;margin-left:6px}
+.mark{position:absolute;z-index:3;pointer-events:none;transform:translate(-50%,-50%)}
+.mark.hit{width:84px;height:84px;border-radius:50%;border:3px dashed var(--brick);display:grid;place-items:center;background:rgba(242,193,78,.18);
+  font-family:var(--f-display);font-size:15px;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.7);animation:stampIn .45s ease-out;rotate:-12deg}
+.mark.miss{width:40px;height:40px;border-radius:50%;border:2px solid rgba(255,255,255,.8);animation:ripple .6s ease-out forwards}
+@keyframes stampIn{from{transform:translate(-50%,-50%) scale(1.8);opacity:0}to{transform:translate(-50%,-50%) scale(1);opacity:1}}
+@keyframes ripple{to{transform:translate(-50%,-50%) scale(2.2);opacity:0}}
+.stamps{display:grid;grid-template-columns:auto repeat(5,1fr);gap:4px;align-items:center;font-size:11px}
+.stamps .rowl{color:var(--muted);font-size:11px;padding-right:4px;white-space:nowrap}
+.stamps .colh{font-family:var(--f-mono);color:var(--muted);text-align:center;font-size:10px}
+.st{width:22px;height:22px;justify-self:center;border-radius:50%;border:1px dashed var(--line);display:grid;place-items:center;font-family:var(--f-mono);font-size:9px;color:var(--muted)}
+.st.got{border:2px solid var(--brick);background:#3a2418;color:var(--bulb)}
+.st.now{outline:2px solid var(--bulb);outline-offset:1px}
+.stamp-sum{margin:8px 0 0;font-size:13px}
+.stamp-sum b{color:var(--bulb)}
+
+/* 소원 불빛 */
+#wishes{position:absolute;inset:0;z-index:2;pointer-events:none}
+.wl{position:absolute;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;border:0;padding:0;cursor:pointer;pointer-events:auto;
+  background:radial-gradient(circle,#fff6d6 0 25%,var(--bulb) 45%,rgba(242,193,78,0) 72%);box-shadow:0 0 18px 6px rgba(242,193,78,.45);animation:twinkle 3.2s ease-in-out infinite}
+.wl::before{content:"";position:absolute;inset:-14px}
+@keyframes twinkle{50%{opacity:.55;transform:scale(.8)}}
+.stage.comparing #wishes,.stage.hunting #wishes{display:none}
+.wish-form{display:flex;flex-direction:column;gap:8px}
+.wish-form textarea{width:100%;min-height:64px;resize:vertical;background:#0f0d0c;color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:8px 10px;font-family:var(--f-body);font-size:14px}
+.wish-row{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.wish-count{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.wish-list{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;max-height:220px;overflow:auto}
+.wish-list li{font-size:13px;padding:6px 8px;border-left:2px solid var(--bulb);background:#17140f;display:flex;gap:8px;justify-content:space-between;align-items:start}
+.wish-list li span{min-width:0;overflow-wrap:anywhere}
+.wish-list button{background:none;border:0;color:var(--muted);cursor:pointer;font-size:12px;flex:none}
+.wish-note{font-size:12px;color:var(--muted);margin:6px 0 0}
+.mini{background:var(--bulb);border:0;color:#1a1408;font-weight:700;border-radius:999px;padding:6px 14px;cursor:pointer;font-size:13px}
+.mini[disabled]{opacity:.4;cursor:default}
+
+/* 엽서 */
+.modal{position:fixed;inset:0;z-index:45;background:rgba(0,0,0,.72);display:grid;place-items:center;overflow:auto;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.modal-box{background:var(--panel);border:1px solid var(--line);border-radius:8px;width:min(920px,100%);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,320px);gap:18px;padding:18px}
+@media (max-width:720px){.modal-box{grid-template-columns:minmax(0,1fr)}}
+.pc-prev{min-width:0}
+.pc-prev canvas,.pc-prev img{display:block;width:100%;height:auto;max-height:70vh;object-fit:contain;border-radius:4px;background:#000}
+.pc-side{display:flex;flex-direction:column;gap:12px;min-width:0}
+.pc-side h3{margin:0;font-family:var(--f-display);font-weight:400;font-size:26px}
+.pc-side p{margin:0;font-size:13px;color:var(--muted)}
+.pc-eras{display:flex;flex-wrap:wrap;gap:6px}
+.pc-eras button{background:#0f0d0c;border:1px solid var(--line);color:var(--fg);border-radius:999px;padding:4px 10px;font-family:var(--f-mono);font-size:12px;cursor:pointer}
+.pc-eras button[aria-pressed="true"]{border-color:var(--bulb);color:var(--bulb)}
+.pc-side input{width:100%;background:#0f0d0c;color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:9px 10px;font-family:var(--f-body);font-size:14px}
+.pc-acts{display:flex;gap:8px;flex-wrap:wrap}
+.pc-status{min-height:1.2em;font-size:13px;color:var(--bulb)}
+
+@media (prefers-reduced-motion:reduce){
+  .wl,.mark.hit,.mark.miss{animation:none}
+  .kb,.veil-bg{animation:none}.hs{animation:none}.flash.show{animation:none}
+  .stage .layer,.rec-frame .layer{transition:none}.rec-year.tick{animation:none}
+}
+</style>
+
+<!-- 인트로 -->
+<div class="veil" id="intro">
+  <img class="veil-bg" src="img2/entrance-1950.jpg" alt="1950년대 신흥시장 입구를 상상한 AI 이미지">
+  <div class="veil-in">
+    <p class="eyebrow">해방촌 신흥시장 · 1950 — 2056</p>
+    <h2>같은 자리,<br>일흔 해</h2>
+    <p class="lede">해방 뒤 실향민이 천막을 친 언덕의 작은 시장. 세 자리에 서서 다섯 시대를 걸어 봅니다.</p>
+    <div class="veil-btns">
+      <button class="vbtn main" id="enterSnd">소리와 함께 들어가기</button>
+      <button class="vbtn" id="enter">조용히 들어가기</button>
+    </div>
+    <p class="fine">모든 장면은 AI로 그린 상상이며 실제 기록 사진이 아닙니다.</p>
+  </div>
+</div>
+
+<!-- 엔딩 -->
+<div class="veil" id="ending" hidden>
+  <img class="veil-bg" src="img2/entrance-2056.jpg" alt="2056년 신흥시장 입구를 상상한 AI 이미지">
+  <div class="veil-in">
+    <p class="eyebrow">1950 → 1970 → 1990 → 2026 → 2056</p>
+    <h2>이 시장의<br>다음 70년은?</h2>
+    <p class="lede">천막에서 니트 골목으로, 슬레이트 지붕에서 구름 지붕으로. 신흥시장은 늘 그 자리에서 다시 태어났습니다.</p>
+    <p class="lede" id="endExtra" style="color:var(--bulb)" hidden></p>
+    <div class="veil-btns">
+      <button class="vbtn main" id="again">처음부터 다시 걷기</button>
+      <button class="vbtn" id="endPc">엽서로 남기기</button>
+      <button class="vbtn" id="endRec">세로 영상으로 보기</button>
+      <button class="vbtn" id="endClose">계속 둘러보기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 엽서 -->
+<div class="modal" id="pcModal" hidden role="dialog" aria-modal="true" aria-labelledby="pcTitle">
+  <div class="modal-box">
+    <div class="pc-prev"><canvas id="pcCanvas" width="1080" height="1350" aria-label="엽서 미리보기"></canvas><img id="pcImg" alt="완성된 엽서" hidden></div>
+    <div class="pc-side">
+      <h3 id="pcTitle">시간여행 엽서</h3>
+      <p>지금 보고 있는 자리에서 시대를 고르고 한 줄을 적어 보세요. 인스타그램 피드 비율(4:5)로 만들어집니다.</p>
+      <div class="pc-eras" id="pcEras" role="group" aria-label="엽서 시대"></div>
+      <label for="pcMsg" class="label" style="margin:0">엽서에 적을 말 (최대 34자)</label>
+      <input id="pcMsg" maxlength="34" placeholder="비워 두면 그 시대의 문장이 들어가요">
+      <div class="pc-acts"><button class="mini" id="pcSave">엽서 저장</button><button class="ctl" id="pcClose">닫기</button></div>
+      <p class="pc-status" id="pcStatus" aria-live="polite"></p>
+      <p>저장한 엽서를 인스타그램에 올릴 때 해방촌 신흥시장 계정을 태그해 주세요.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 세로 녹화 모드 -->
+<div class="rec" id="rec" hidden>
+  <div class="rec-frame" id="recFrame" aria-live="polite">
+    <img class="layer out" id="recA" alt="">
+    <img class="layer out" id="recB" alt="">
+    <div class="rec-shade"></div>
+    <div class="rec-bars" id="recBars"><i><b></b></i><i><b></b></i><i><b></b></i></div>
+    <div class="rec-top" id="recTop"><div class="rec-spot" id="recSpot"></div><div class="rec-year" id="recYear"></div><div class="rec-era" id="recEra"></div></div>
+    <div class="rec-cap" id="recCap"></div>
+    <div class="rec-ai">AI 생성 이미지</div>
+    <div class="rec-card" id="recCard" hidden></div>
+  </div>
+  <button class="rec-x" id="recX" aria-label="세로 녹화 모드 닫기">×</button>
+</div>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>신흥시장 <em>시간산책</em></h1>
+      <p class="sub">세 자리에 서서 1950년대부터 2056년까지, 같은 시장이 어떻게 변하는지 봅니다.</p>
+    </div>
+    <span class="addr">서울 용산구 신흥로 · 해방촌</span>
+  </header>
+
+  <div class="grid">
+    <section class="main">
+      <div class="stage" id="stage" aria-live="polite">
+        <img class="layer" id="imgA" alt="">
+        <img class="layer out" id="imgB" alt="">
+        <div class="cmp" id="cmp" hidden><img id="cmpImg" alt=""></div>
+        <div class="cmp-line" id="cmpLine" hidden></div>
+        <div class="cmp-lab l" id="cmpLabL" hidden></div>
+        <div class="cmp-lab r" id="cmpLabR" hidden></div>
+        <div id="wishes"></div>
+        <div id="marks"></div>
+        <div class="hunt-chip" id="huntChip" hidden></div>
+        <div class="flash" id="flash"></div>
+        <div class="tag"><span class="chip" id="chipEra"></span><span class="chip ai">AI 생성 이미지</span></div>
+        <button class="nav prev" id="prev" aria-label="이전 지점">‹</button>
+        <button class="nav next" id="next" aria-label="다음 지점">›</button>
+        <div id="hotspots"></div>
+        <div class="pop" id="pop" hidden><button class="x" id="popX" aria-label="닫기">×</button><h3 id="popT"></h3><p id="popB"></p></div>
+        <div class="stage-cap" id="stageCap" hidden></div>
+      </div>
+
+      <div class="controls">
+        <button class="ctl" id="btnPlay" aria-pressed="false"><span class="dot"></span><span id="btnPlayT">자동 재생</span></button>
+        <button class="ctl" id="btnCmp" aria-pressed="false">시대 비교</button>
+        <span class="cmp-sel" id="cmpSel" hidden>
+          <label for="selL">왼쪽</label><select id="selL"></select>
+          <label for="selR">오른쪽</label><select id="selR"></select>
+        </span>
+        <button class="ctl" id="btnHunt" aria-pressed="false">숨은 물건 찾기</button>
+        <button class="ctl" id="btnPc">엽서 만들기</button>
+        <button class="ctl" id="btnSnd" aria-pressed="false">소리 켜기</button>
+        <button class="ctl primary" id="btnRec">세로 영상 모드</button>
+      </div>
+
+      <div class="eras">
+        <div class="track" role="group" aria-label="시대 선택" id="track"></div>
+        <p class="era-note" id="eraNote"></p>
+      </div>
+    </section>
+
+    <aside>
+      <div class="card">
+        <p class="label">지금 서 있는 곳</p>
+        <div class="spot-no" id="spotNo"></div>
+        <div class="spot-name" id="spotName"></div>
+        <p class="spot-desc" id="spotDesc"></p>
+      </div>
+
+      <div class="card">
+        <p class="label">이 자리의 다섯 시대</p>
+        <div class="thumbs" id="thumbs"></div>
+      </div>
+
+      <div class="card">
+        <p class="label">탐험 도장</p>
+        <div class="stamps" id="stamps"></div>
+        <p class="stamp-sum" id="stampSum"></p>
+      </div>
+
+      <div class="card" id="wishCard">
+        <p class="label">2056 신흥시장에 바라는 것</p>
+        <p class="wish-note" id="wishIntro" style="margin:0 0 8px">남긴 한 줄은 2056년 장면 위에 작은 불빛으로 켜집니다. 한 사람당 하나, 언제든 고칠 수 있어요.</p>
+        <form class="wish-form" id="wishForm" hidden>
+          <label for="wishText" class="label" style="margin:0">나의 소원</label>
+          <textarea id="wishText" maxlength="60" placeholder="예: 70년 뒤에도 이 골목에 털실 가게 하나쯤은 남아 있기를"></textarea>
+          <div class="wish-row"><span class="wish-count" id="wishCount">0 / 60</span><button class="mini" id="wishBtn" type="submit">불 밝히기</button></div>
+        </form>
+        <p class="wish-note" id="wishMsg"></p>
+        <ul class="wish-list" id="wishList"></ul>
+      </div>
+
+      <div class="card">
+        <p class="label">ㄷ자 골목 지도 (개념도)</p>
+        <svg class="map" viewBox="0 0 210 150" role="img" aria-label="신흥시장 탐방 지점 지도">
+          <path class="route" d="M182 24 H42 Q28 24 28 38 V112 Q28 126 42 126 H182"/>
+          <path class="route-in" d="M182 24 H42 Q28 24 28 38 V112 Q28 126 42 126 H182"/>
+          <g id="mapDots"></g>
+          <text class="cap" x="190" y="144" text-anchor="end">계단 아래</text>
+        </svg>
+        <p class="hint">화면을 좌우로 밀거나 <kbd>←</kbd><kbd>→</kbd>로 이동, <kbd>1</kbd>–<kbd>5</kbd>로 시대 전환</p>
+      </div>
+    </aside>
+  </div>
+
+  <footer>모든 장면은 AI로 생성한 이미지이며 실제 기록 사진이 아닙니다. 소리는 브라우저에서 합성한 효과음입니다. 2026 해방촌 신흥시장 AI 콘텐츠 공모전 출품작.</footer>
+</div>
+
+<script>
+const ERAS=[
+ {y:"1950",n:"천막 장터",cap:"해방과 전쟁 뒤, 이 언덕에 천막 장터가 섰다",
+  note:"<strong>1950년대</strong> 해방 후 돌아온 동포와 월남한 실향민이 남산 아래 천막을 치고 생필품을 사고팔던 장터."},
+ {y:"1970",n:"니트 골목",cap:"털실과 편직기 소리로 골목이 붐비던 시절",
+  note:"<strong>1970~80년대</strong> 니트 산업이 해방촌을 먹여 살리던 전성기. 골목마다 털실과 편직기 소리가 가득했습니다."},
+ {y:"1990",n:"슬레이트 지붕",cap:"슬레이트 지붕 아래, 하나둘 셔터가 내려갔다",
+  note:"<strong>1990년대 이후</strong> 대형마트와 온라인 소비에 밀려 쇠퇴. 낡은 슬레이트 지붕 아래 셔터 내린 점포가 늘었습니다."},
+ {y:"2026",n:"클라우드 지붕",cap:"구름 지붕 아래, 다시 불이 켜진 골목",
+  note:"<strong>2026년 현재</strong> 도시재생으로 투명한 막 지붕이 덮였고, 카페·식당과 야장이 골목을 채웁니다."},
+ {y:"2056",n:"미래의 시장",cap:"같은 벽돌집, 다음 70년의 신흥시장",
+  note:"<strong>2056년 상상</strong> 같은 벽돌집, 같은 골목. 구름 지붕 아래 텃밭이 자라고 작은 로봇이 장바구니를 나릅니다."}
+];
+const SPOTS=[
+ {key:"entrance",name:"신흥로 입구",desc:"신흥로에서 시장으로 들어서는 입구. 같은 자리에 시대마다 다른 간판이 걸립니다.",
+  hs:[{x:50,y:40,t:"입구 간판",b:{
+    "1950":"간판 대신 천과 판자에 쓴 글씨. 장터에는 아직 정식 이름이 없었습니다.",
+    "1970":"손으로 칠한 나무 간판. 입구 앞까지 메리야스와 털실이 쌓였습니다.",
+    "1990":"빛바랜 간판 아래 셔터가 내려진 입구. 시장은 30년 넘게 침체를 겪습니다.",
+    "2026":"'Shinheung Art Market'. 2016년 상인과 건물주가 임대료를 6년간 동결하기로 합의하며 다시 살아났습니다.",
+    "2056":"같은 간판 자리, 그 위로 덩굴과 화분이 자랍니다. 남긴 흔적이 시장의 얼굴이 됩니다."}},
+   {x:27,y:30,t:"전봇대와 볼록거울",b:{
+    "1950":"아직 전기가 닿지 않은 길. 사람들은 지게와 머리에 짐을 이고 언덕을 오릅니다.",
+    "1970":"전선이 몇 가닥 들어오고, 볼록거울이 좁은 길의 모퉁이를 비춥니다.",
+    "1990":"엉킨 전선과 덕지덕지 붙은 전단지. 쇠퇴기의 거리 표정입니다.",
+    "2026":"엉킨 전선과 볼록거울은 지금도 그대로. 남산 아래 고도제한으로 동네는 낮은 2~3층 벽돌집을 유지합니다.",
+    "2056":"볼록거울은 길 안내를 띄우는 작은 화면이 되었습니다."}}]},
+ {key:"lane",name:"시장 안 골목",desc:"입구를 지나 언덕을 따라 이어지는 시장 골목. 지붕이 시대를 가장 크게 바꿉니다.",
+  hs:[{x:50,y:10,t:"골목의 지붕",b:{
+    "1950":"하늘을 가린 건 낡은 천막뿐. 비가 오면 골목이 그대로 젖었습니다.",
+    "1970":"지붕 없이 열린 하늘. 전선이 골목 위를 가로지릅니다.",
+    "1990":"슬레이트 지붕이 골목을 덮어 낮에도 어둡습니다.",
+    "2026":"슬레이트를 걷어내고 흰 철골 위에 투명한 막 지붕 '클라우드'를 올렸습니다. 비는 막고 빛과 바람은 들입니다.",
+    "2056":"막 지붕이 정말 구름처럼 부풀어 골목 전체에 부드러운 빛을 내립니다."}},
+   {x:50,y:82,t:"골목 바닥",b:{
+    "1950":"흙과 돌이 섞인 길. 좌판 사이로 쌀자루와 고무신이 놓였습니다.",
+    "1970":"시멘트를 깐 골목과 계단. 털실 좌판이 길가를 따라 이어집니다.",
+    "1990":"물웅덩이와 빈 상자, 지나가는 사람은 몇 명뿐입니다.",
+    "2026":"골목에 테이블이 놓이는 야장 풍경. 식당 영업시간은 밤 9시에서 자정까지로 늘었습니다.",
+    "2056":"계단을 따라 은은한 발광선, 사람들 사이로 배달 로봇이 지나갑니다."}}]},
+ {key:"window",name:"가게 창 너머",desc:"골목 쪽으로 열린 작은 가게의 창. 진열대 위 물건이 그 시대의 살림을 보여 줍니다.",
+  hs:[{x:50,y:12,t:"선반 위",b:{
+    "1950":"약병과 항아리, 짚 묶음. 꼭 필요한 살림살이만 올라 있습니다.",
+    "1970":"색색의 털실 타래와 상자. 이 시기 해방촌은 니트 산업으로 전성기를 누렸습니다.",
+    "1990":"녹슨 깡통과 말라 버린 화분. 1996년 달력이 멈춘 시간을 말해 줍니다.",
+    "2026":"식재료와 병이 빼곡한 선반. 빈 점포마다 젊은 창업자들이 들어왔습니다.",
+    "2056":"라벨 없는 유리병 사이로 작은 허브 화분이 자랍니다."}},
+   {x:55,y:80,t:"카운터",b:{
+    "1950":"나무 좌판에 그릇과 주전자. 가게와 집의 경계가 없던 시절입니다.",
+    "1970":"접힌 스웨터와 주문 장부. 안쪽에서는 편직기와 재봉틀이 돌아갑니다.",
+    "1990":"먼지 쌓인 카운터와 낡은 전화기. 주인을 기다리는 빈 접시 두 장.",
+    "2026":"저녁 손님을 기다리는 바 테이블. 같은 계단, 같은 선반이 새 가게의 일부가 되었습니다.",
+    "2056":"투명한 메뉴판과 수경재배 화분. 오래된 나무 카운터는 그대로 남았습니다."}}]}
+];
+const FIND={
+ entrance:{"1950":[27,60,"종이우산"],"1970":[58,73,"털실 뭉치"],"1990":[59,88,"낡은 수레바퀴"],"2026":[48,58,"줄전구"],"2056":[53,88,"배달 로봇"]},
+ lane:{"1950":[82,75,"고무신"],"1970":[13,68,"편직기"],"1990":[76,84,"오토바이"],"2026":[61,55,"흰 철골 기둥"],"2056":[72,43,"태양광 패널"]},
+ window:{"1950":[59,84,"주전자"],"1970":[17,52,"영수증"],"1990":[33,42,"1996년 달력"],"2026":[44,76,"접시 더미"],"2056":[75,81,"수경재배 화분"]}
+};
+const MAP=[[182,24],[28,75],[110,126]];
+const src=(s,e)=>`img2/${SPOTS[s].key}-${ERAS[e].y}.jpg`;
+const $=id=>document.getElementById(id);
+const stage=$("stage");
+
+let spot=0, era=0, front="A", comparing=false, cmpL=0, cmpR=3, autoTimer=null, hunting=false;
+
+/* ── 구성 요소 만들기 ── */
+ERAS.forEach((e,i)=>{const b=document.createElement("button");b.className="era-btn";b.id="era-"+e.y;
+  b.innerHTML=`<b>${e.y}</b><span>${e.n}</span>`;b.onclick=()=>{stopAuto();setEra(i);};$("track").appendChild(b);});
+ERAS.forEach((e,i)=>{const b=document.createElement("button");b.id="th-"+e.y;b.setAttribute("aria-label",e.y+"년 보기");
+  b.innerHTML=`<img alt="">`;b.onclick=()=>{stopAuto();setEra(i);};$("thumbs").appendChild(b);});
+["selL","selR"].forEach(id=>ERAS.forEach((e,i)=>{const o=document.createElement("option");o.value=i;o.textContent=e.y;$(id).appendChild(o);}));
+$("selL").value=cmpL;$("selR").value=cmpR;
+const NS="http://www.w3.org/2000/svg";
+MAP.forEach(([x,y],i)=>{const c=document.createElementNS(NS,"circle");c.setAttribute("cx",x);c.setAttribute("cy",y);c.setAttribute("r",8);
+  c.setAttribute("tabindex","0");c.setAttribute("aria-label",SPOTS[i].name);c.onclick=()=>{stopAuto();go(i);};
+  c.onkeydown=ev=>{if(ev.key==="Enter"){stopAuto();go(i);}};$("mapDots").appendChild(c);
+  const t=document.createElementNS(NS,"text");t.setAttribute("x",x);t.setAttribute("y",y+3);t.setAttribute("text-anchor","middle");t.setAttribute("class","num");t.textContent=i+1;$("mapDots").appendChild(t);
+  const l=document.createElementNS(NS,"text");l.setAttribute("x",i===1?x+14:x);l.setAttribute("y",i===1?y+3:(i===0?y+20:y-12));l.setAttribute("text-anchor",i===1?"start":"middle");l.textContent=SPOTS[i].name;$("mapDots").appendChild(l);});
+
+/* ── 화면 그리기 ── */
+function restartKB(el){el.classList.remove("kb");void el.offsetWidth;el.classList.add("kb");}
+function swapImage(s,alt){
+  const a=$("imgA"),b=$("imgB");const cur=front==="A"?a:b,nxt=front==="A"?b:a;
+  if(cur.getAttribute("src")===s)return;
+  nxt.onload=()=>{nxt.classList.remove("out");cur.classList.add("out");restartKB(nxt);front=front==="A"?"B":"A";};
+  nxt.alt=alt;nxt.src=s;
+}
+function renderHotspots(){
+  const box=$("hotspots");box.innerHTML="";$("pop").hidden=true;
+  SPOTS[spot].hs.forEach(h=>{const d=document.createElement("button");d.className="hs";d.style.left=h.x+"%";d.style.top=h.y+"%";
+    d.setAttribute("aria-label",h.t);d.onclick=()=>{stopAuto();box.querySelectorAll(".hs").forEach(x=>x.classList.remove("on"));d.classList.add("on");
+      $("popT").textContent=h.t;$("popB").textContent=h.b[ERAS[era].y];$("pop").hidden=false;};box.appendChild(d);});
+}
+function render(){
+  const s=SPOTS[spot],e=ERAS[era];
+  if(comparing){
+    swapImage(src(spot,cmpL),`${s.name}, ${ERAS[cmpL].y}년`);
+    $("cmpImg").src=src(spot,cmpR);$("cmpImg").alt=`${s.name}, ${ERAS[cmpR].y}년`;
+    $("cmpLabL").textContent=ERAS[cmpL].y;$("cmpLabR").textContent=ERAS[cmpR].y;
+    $("chipEra").textContent=`${ERAS[cmpL].y} ↔ ${ERAS[cmpR].y}`;
+  } else {
+    swapImage(src(spot,era),`${s.name}, ${e.y}년`);
+    $("chipEra").textContent=e.y+" · "+e.n;
+  }
+  $("spotNo").textContent=`지점 ${String(spot+1).padStart(2,"0")} / ${String(SPOTS.length).padStart(2,"0")}`;
+  $("spotName").textContent=s.name;$("spotDesc").textContent=s.desc;
+  $("eraNote").innerHTML=e.note;
+  $("stageCap").innerHTML=`<small>${e.y} · ${s.name}</small>${e.cap}`;
+  document.querySelectorAll(".era-btn").forEach((b,i)=>b.setAttribute("aria-pressed",i===era));
+  document.querySelectorAll("#thumbs button").forEach((b,i)=>{b.setAttribute("aria-pressed",i===era);b.firstChild.src=src(spot,i);});
+  document.querySelectorAll("#mapDots circle").forEach((c,i)=>c.classList.toggle("on",i===spot));
+  $("prev").disabled=spot===0;
+  $("next").setAttribute("aria-label",spot===SPOTS.length-1?"여정 마치기":"다음 지점");
+  renderHotspots();renderHunt();renderWishLights();renderStamps();
+}
+function flashYear(){if(comparing)return;const f=$("flash");f.textContent=ERAS[era].y;f.classList.remove("show");void f.offsetWidth;f.classList.add("show");}
+function go(i){if(i<0||i>=SPOTS.length)return;spot=i;render();}
+function next(){if(spot<SPOTS.length-1)go(spot+1);else showEnding();}
+function setEra(i){if(i<0||i>=ERAS.length)return;era=i;render();flashYear();playScape(ERAS[era].y);}
+
+/* ── 자동 재생 ── */
+function stepAuto(){
+  if(era<ERAS.length-1){setEra(era+1);}
+  else if(spot<SPOTS.length-1){spot++;era=0;render();flashYear();playScape(ERAS[0].y);}
+  else {stopAuto();showEnding();return;}
+}
+function startAuto(){
+  if(comparing)toggleCmp(false);
+  $("btnPlay").setAttribute("aria-pressed","true");$("btnPlayT").textContent="멈추기";
+  $("stageCap").hidden=false;$("pop").hidden=true;
+  autoTimer=setInterval(stepAuto,3400);
+}
+function stopAuto(){
+  if(!autoTimer)return;clearInterval(autoTimer);autoTimer=null;
+  $("btnPlay").setAttribute("aria-pressed","false");$("btnPlayT").textContent="자동 재생";$("stageCap").hidden=true;
+}
+$("btnPlay").onclick=()=>autoTimer?stopAuto():startAuto();
+
+/* ── 시대 비교 ── */
+function toggleCmp(on){
+  if(on&&hunting)toggleHunt(false);
+  comparing=on;stopAuto();
+  stage.classList.toggle("comparing",on);
+  ["cmp","cmpLine","cmpLabL","cmpLabR","cmpSel"].forEach(id=>$(id).hidden=!on);
+  $("btnCmp").setAttribute("aria-pressed",on);
+  stage.style.setProperty("--p","50%");render();
+}
+$("btnCmp").onclick=()=>toggleCmp(!comparing);
+$("selL").onchange=e=>{cmpL=+e.target.value;render();};
+$("selR").onchange=e=>{cmpR=+e.target.value;render();};
+let dragging=false,sx=0,sy=0,tracking=false;
+function setP(ev){const r=stage.getBoundingClientRect();const p=Math.max(2,Math.min(98,(ev.clientX-r.left)/r.width*100));stage.style.setProperty("--p",p+"%");}
+stage.addEventListener("pointerdown",ev=>{
+  if(ev.target.closest("button,select"))return;
+  if(comparing){dragging=true;try{stage.setPointerCapture(ev.pointerId)}catch(e){}setP(ev);}
+  else {tracking=true;sx=ev.clientX;sy=ev.clientY;}
+});
+stage.addEventListener("pointermove",ev=>{if(dragging)setP(ev);});
+stage.addEventListener("pointerup",ev=>{
+  if(dragging){dragging=false;return;}
+  if(!tracking)return;tracking=false;
+  const dx=ev.clientX-sx,dy=ev.clientY-sy;
+  if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5){stopAuto();dx<0?next():go(spot-1);}
+  else if(hunting&&Math.abs(dx)<10&&Math.abs(dy)<10&&!ev.target.closest("button"))huntTest(ev);
+});
+stage.addEventListener("pointercancel",()=>{dragging=false;tracking=false;});
+
+/* ── 시대별 소리 (브라우저 합성) ── */
+const Snd={ctx:null,master:null,buf:null,cur:null,on:false};
+function noiseBuf(c){const b=c.createBuffer(1,c.sampleRate*2,c.sampleRate);const d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;return b;}
+function noiseSrc(){const s=Snd.ctx.createBufferSource();s.buffer=Snd.buf;s.loop=true;s.start();return s;}
+function filt(type,f,q){const n=Snd.ctx.createBiquadFilter();n.type=type;n.frequency.value=f;if(q)n.Q.value=q;return n;}
+function gainN(v){const g=Snd.ctx.createGain();g.gain.value=v;return g;}
+function osc(f,type){const o=Snd.ctx.createOscillator();o.type=type||"sine";o.frequency.value=f;o.start();return o;}
+function crowd(out,level,center){const s=noiseSrc(),f=filt("bandpass",center,.7),g=gainN(level);s.connect(f).connect(g).connect(out);
+  const l=osc(.23),lg=gainN(level*.45);l.connect(lg).connect(g.gain);return [s,l];}
+function blip(out,f,dur,vol){const c=Snd.ctx,o=c.createOscillator(),g=c.createGain(),t=c.currentTime;o.frequency.value=f;
+  g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g).connect(out);o.start(t);o.stop(t+dur+.05);}
+function burst(out,f,dur,vol){const c=Snd.ctx,s=c.createBufferSource();s.buffer=Snd.buf;const fl=filt("bandpass",f,3),g=c.createGain(),t=c.currentTime;
+  g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+dur);s.connect(fl).connect(g).connect(out);s.start(t,Math.random());s.stop(t+dur+.05);}
+const SCAPES={
+  "1950":out=>{const n=crowd(out,.22,420);const iv=setInterval(()=>{if(Math.random()<.3)burst(out,160,.25,.3);},700);return{n,iv:[iv]};},
+  "1970":out=>{const n=crowd(out,.08,600);const h=osc(110),hg=gainN(.02);h.connect(hg).connect(out);n.push(h);
+    let k=0;const iv=setInterval(()=>{burst(out,k%2?2600:1800,.04,.32);k++;},170);return{n,iv:[iv]};},
+  "1990":out=>{const s=noiseSrc(),f=filt("highpass",1500),g=gainN(.08);s.connect(f).connect(g).connect(out);
+    const h=osc(120,"square"),hl=filt("lowpass",300),hg=gainN(.006);h.connect(hl).connect(hg).connect(out);
+    const iv=setInterval(()=>{if(Math.random()<.6)burst(out,3000+Math.random()*2000,.02,.18);},90);return{n:[s,h],iv:[iv]};},
+  "2026":out=>{const n=crowd(out,.2,700);const iv=setInterval(()=>{if(Math.random()<.35)blip(out,2200+Math.random()*1600,.6,.05);},500);return{n,iv:[iv]};},
+  "2056":out=>{const n=[];[130.8,164.8,196,261.6].forEach((f,i)=>{const o=osc(f),g=gainN(.035),l=osc(.1+i*.05),lg=gainN(.02);
+      l.connect(lg).connect(g.gain);o.connect(g).connect(out);n.push(o,l);});
+    const notes=[523.3,659.3,784,1046.5];const iv=setInterval(()=>{if(Math.random()<.4)blip(out,notes[Math.floor(Math.random()*4)],1.8,.03);},900);return{n,iv:[iv]};}
+};
+function fadeOut(o){const c=Snd.ctx,t=c.currentTime;o.bus.gain.cancelScheduledValues(t);o.bus.gain.setValueAtTime(o.bus.gain.value,t);o.bus.gain.linearRampToValueAtTime(0,t+1);
+  setTimeout(()=>{o.sc.iv.forEach(clearInterval);o.sc.n.forEach(x=>{try{x.stop()}catch(e){}});try{o.bus.disconnect()}catch(e){}},1200);}
+function playScape(y){
+  if(!Snd.on||!Snd.ctx)return;if(Snd.cur&&Snd.cur.y===y)return;
+  try{const c=Snd.ctx,bus=c.createGain();bus.gain.value=0;bus.connect(Snd.master);const sc=SCAPES[y](bus);
+    bus.gain.linearRampToValueAtTime(1,c.currentTime+1.2);const old=Snd.cur;Snd.cur={bus,sc,y};if(old)fadeOut(old);}catch(e){}
+}
+function updSnd(){$("btnSnd").setAttribute("aria-pressed",Snd.on);$("btnSnd").textContent=Snd.on?"소리 끄기":"소리 켜기";}
+function soundOn(){
+  try{if(!Snd.ctx){const AC=window.AudioContext||window.webkitAudioContext;Snd.ctx=new AC();Snd.master=Snd.ctx.createGain();Snd.master.gain.value=.8;
+      Snd.master.connect(Snd.ctx.destination);Snd.buf=noiseBuf(Snd.ctx);}
+    Snd.ctx.resume();Snd.on=true;playScape(recOn?recYear:ERAS[era].y);}catch(e){Snd.on=false;}
+  updSnd();
+}
+function soundOff(){Snd.on=false;if(Snd.cur){fadeOut(Snd.cur);Snd.cur=null;}updSnd();}
+$("btnSnd").onclick=()=>Snd.on?soundOff():soundOn();
+
+/* ── 인트로 · 엔딩 ── */
+function enter(withSound){$("intro").hidden=true;spot=0;era=0;render();flashYear();if(withSound)soundOn();}
+$("enter").onclick=()=>enter(false);
+$("enterSnd").onclick=()=>enter(true);
+function showEnding(){stopAuto();
+  const n=foundCount(),w=wishDocs.length;const parts=[];
+  if(n===15)parts.push("탐험 도장 15개를 모두 모았어요. 다섯 시대의 신흥시장을 전부 걸어 본 탐험가입니다.");
+  else if(n>0)parts.push(`탐험 도장 ${n}/15. 아직 찾지 못한 물건이 시장 어딘가에 숨어 있어요.`);
+  if(w>0)parts.push(`${w}개의 소원이 2056년의 골목을 밝히고 있어요.`);
+  $("endExtra").textContent=parts.join(" ");$("endExtra").hidden=!parts.length;
+  $("ending").hidden=false;playScape("2056");$("again").focus();}
+$("again").onclick=()=>{$("ending").hidden=true;spot=0;era=0;render();flashYear();playScape("1950");};
+$("endClose").onclick=()=>{$("ending").hidden=true;};
+$("endRec").onclick=()=>{$("ending").hidden=true;startRec();};
+$("endPc").onclick=()=>{$("ending").hidden=true;openPc();};
+
+/* ── 세로 녹화 모드 ── */
+let recOn=false,recI=0,recTimer=null,recFront="A",recYear="1950",dimTimer=null;
+const recSteps=[{t:"intro"}];SPOTS.forEach((_,s)=>ERAS.forEach((_,e)=>recSteps.push({s,e})));recSteps.push({t:"end"});
+function recImg(s){const a=$("recA"),b=$("recB");const cur=recFront==="A"?a:b,nxt=recFront==="A"?b:a;
+  if(cur.getAttribute("src")===s&&!cur.classList.contains("out"))return;
+  nxt.onload=()=>{nxt.classList.remove("out");cur.classList.add("out");restartKB(nxt);recFront=recFront==="A"?"B":"A";};nxt.src=s;}
+function recBars(s,e){document.querySelectorAll("#recBars b").forEach((b,i)=>b.style.width=(i<s?100:i===s?(e+1)/ERAS.length*100:0)+"%");}
+function recStep(){
+  clearTimeout(recTimer);const st=recSteps[recI];if(!st)return;
+  const card=$("recCard");
+  if(st.t==="intro"){
+    recImg(src(0,0));recBars(-1,0);$("recTop").hidden=true;$("recCap").hidden=true;
+    card.innerHTML="<small>해방촌 신흥시장</small><b>1950년,<br>남산 아래 언덕</b><span>같은 자리, 일흔 해를 걷습니다</span>";card.hidden=false;
+    recYear="1950";playScape("1950");recTimer=setTimeout(()=>{recI++;recStep();},3400);
+  } else if(st.t==="end"){
+    recImg(src(0,4));recBars(SPOTS.length,0);$("recTop").hidden=true;$("recCap").hidden=true;
+    card.innerHTML="<small>1950 → 2056</small><b>이 시장의<br>다음 70년은?</b><span>AI로 다시 걸어 본 해방촌 신흥시장</span>";card.hidden=false;
+  } else {
+    card.hidden=true;$("recTop").hidden=false;$("recCap").hidden=false;
+    const e=ERAS[st.e];recImg(src(st.s,st.e));recBars(st.s,st.e);
+    $("recSpot").textContent=`${String(st.s+1).padStart(2,"0")}  ${SPOTS[st.s].name}`;
+    const y=$("recYear");y.textContent=e.y;y.classList.remove("tick");void y.offsetWidth;y.classList.add("tick");
+    $("recEra").textContent=e.n;$("recCap").textContent=e.cap;
+    recYear=e.y;playScape(e.y);recTimer=setTimeout(()=>{recI++;recStep();},2900);
+  }
+}
+function startRec(){
+  stopAuto();if(comparing)toggleCmp(false);
+  recOn=true;$("rec").hidden=false;recI=0;
+  ["recA","recB"].forEach(id=>{$(id).classList.add("out");$(id).removeAttribute("src");});
+  try{const r=$("rec");(r.requestFullscreen||r.webkitRequestFullscreen||function(){}).call(r)?.catch?.(()=>{});}catch(e){}
+  $("recX").classList.remove("dim");clearTimeout(dimTimer);dimTimer=setTimeout(()=>$("recX").classList.add("dim"),1600);
+  recStep();
+}
+function stopRec(){
+  if(!recOn)return;recOn=false;clearTimeout(recTimer);$("rec").hidden=true;
+  try{if(document.fullscreenElement)document.exitFullscreen();}catch(e){}
+  playScape(ERAS[era].y);
+}
+$("btnRec").onclick=startRec;
+$("recX").onclick=stopRec;
+$("recFrame").onclick=()=>{if(recSteps[recI]&&recSteps[recI].t==="end"){recI=0;recStep();}};
+
+/* ── 키보드 ── */
+document.addEventListener("keydown",ev=>{
+  if(ev.target.tagName==="SELECT")return;
+  if(ev.key==="Escape"){if(!$("pcModal").hidden){closePc();return;}if(recOn)stopRec();else if(!$("ending").hidden)$("ending").hidden=true;else if(!$("intro").hidden)enter(false);return;}
+  if(recOn||!$("intro").hidden||!$("ending").hidden||!$("pcModal").hidden)return;
+  if(ev.target.tagName==="INPUT"||ev.target.tagName==="TEXTAREA")return;
+  if(ev.key==="ArrowRight"){stopAuto();next();}
+  else if(ev.key==="ArrowLeft"){stopAuto();go(spot-1);}
+  else if(/^[1-5]$/.test(ev.key)){stopAuto();setEra(+ev.key-1);}
+});
+$("prev").onclick=()=>{stopAuto();go(spot-1);};
+$("next").onclick=()=>{stopAuto();next();};
+$("popX").onclick=()=>{$("pop").hidden=true;document.querySelectorAll(".hs").forEach(x=>x.classList.remove("on"));};
+
+/* ── 숨은 물건 찾기 ── */
+let found={};
+try{found=JSON.parse(localStorage.getItem("shinheung-found")||"{}")||{};}catch(e){found={};}
+const fkey=(s,e)=>SPOTS[s].key+"-"+ERAS[e].y;
+const foundCount=()=>Object.keys(found).filter(k=>found[k]).length;
+function saveFound(){try{localStorage.setItem("shinheung-found",JSON.stringify(found));}catch(e){}}
+function target(){return FIND[SPOTS[spot].key][ERAS[era].y];}
+function toggleHunt(on){
+  if(on&&comparing)toggleCmp(false);
+  hunting=on;stopAuto();stage.classList.toggle("hunting",on);$("btnHunt").setAttribute("aria-pressed",on);render();
+}
+$("btnHunt").onclick=()=>toggleHunt(!hunting);
+function renderHunt(){
+  const chip=$("huntChip");$("marks").innerHTML="";
+  if(!hunting||comparing){chip.hidden=true;return;}
+  const t=target(),k=fkey(spot,era);
+  chip.innerHTML=found[k]?`찾았어요: ${t[2]}<small>${foundCount()}/15</small>`:`찾아보세요: ${t[2]}<small>${foundCount()}/15</small>`;
+  chip.hidden=false;
+  if(found[k])addMark("hit",t[0],t[1],ERAS[era].y);
+}
+function addMark(kind,x,y,label){const m=document.createElement("div");m.className="mark "+kind;m.style.left=x+"%";m.style.top=y+"%";
+  if(label)m.textContent=label;$("marks").appendChild(m);if(kind==="miss")setTimeout(()=>m.remove(),650);}
+function huntTest(ev){
+  const r=stage.getBoundingClientRect();const x=(ev.clientX-r.left)/r.width*100,y=(ev.clientY-r.top)/r.height*100;
+  const t=target(),k=fkey(spot,era);
+  const d=Math.hypot(x-t[0],(y-t[1])*(r.height/r.width));
+  if(d<9){
+    if(!found[k]){found[k]=1;saveFound();playChime();}
+    renderHunt();renderStamps();
+    if(foundCount()===15)setTimeout(showEnding,900);
+  } else addMark("miss",x,y);
+}
+function renderStamps(){
+  const g=$("stamps");let h='<span></span>'+ERAS.map(e=>`<span class="colh">${e.y.slice(2)}</span>`).join("");
+  SPOTS.forEach((s,si)=>{h+=`<span class="rowl">${s.name.replace("신흥로 ","").replace("시장 안 ","").replace(" 너머","")}</span>`;
+    ERAS.forEach((e,ei)=>{const k=fkey(si,ei),got=!!found[k],now=hunting&&si===spot&&ei===era;
+      h+=`<span class="st${got?" got":""}${now?" now":""}" title="${got?FIND[s.key][e.y][2]:"아직 못 찾음"}">${got?"✓":""}</span>`;});});
+  g.innerHTML=h;
+  const n=foundCount();
+  $("stampSum").innerHTML=n===15?"<b>15/15</b> 모든 시대의 물건을 찾았어요!":`<b>${n}/15</b> '숨은 물건 찾기'를 켜고 장면 속 물건을 눌러 보세요.`;
+}
+function playChime(){if(!Snd.on||!Snd.ctx)return;try{blip(Snd.master,880,.5,.12);setTimeout(()=>blip(Snd.master,1318.5,.7,.1),120);}catch(e){}}
+
+/* ── 엽서 ── */
+let pcEra=0,pcBusy=false,downloads=null;
+ERAS.forEach((e,i)=>{const b=document.createElement("button");b.textContent=e.y;b.onclick=()=>{pcEra=i;drawCard();};$("pcEras").appendChild(b);});
+function openPc(){stopAuto();pcEra=comparing?cmpR:era;$("pcModal").hidden=false;$("pcStatus").textContent="";$("pcImg").hidden=true;$("pcCanvas").hidden=false;drawCard();$("pcMsg").focus();}
+function closePc(){$("pcModal").hidden=true;}
+$("btnPc").onclick=openPc;$("pcClose").onclick=closePc;
+$("pcModal").addEventListener("click",ev=>{if(ev.target.id==="pcModal")closePc();});
+let pcT=null;$("pcMsg").addEventListener("input",()=>{clearTimeout(pcT);pcT=setTimeout(drawCard,180);});
+const imgCache={};
+function loadImg(u){if(imgCache[u])return imgCache[u];imgCache[u]=new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=u;});return imgCache[u];}
+function wrapText(c,text,x,y,maxW,lh,maxLines){
+  const words=text.split(/\s+/);let line="",lines=[];
+  for(const w of words){const test=line?line+" "+w:w;if(c.measureText(test).width<=maxW){line=test;continue;}
+    if(line)lines.push(line);line=w;
+    while(c.measureText(line).width>maxW){let i=line.length;while(i>1&&c.measureText(line.slice(0,i)).width>maxW)i--;lines.push(line.slice(0,i));line=line.slice(i);}}
+  if(line)lines.push(line);
+  if(lines.length>maxLines){lines=lines.slice(0,maxLines);lines[maxLines-1]=lines[maxLines-1].replace(/.$/,"…");}
+  lines.forEach((l,i)=>c.fillText(l,x,y+i*lh));
+}
+async function drawCard(){
+  document.querySelectorAll("#pcEras button").forEach((b,i)=>b.setAttribute("aria-pressed",i===pcEra));
+  const cv=$("pcCanvas"),c=cv.getContext("2d"),W=1080,H=1350;
+  try{await Promise.all(['64px "Do Hyeon"','500 26px "Gothic A1"','24px "IBM Plex Mono"'].map(f=>document.fonts.load(f)));}catch(e){}
+  let img;try{img=await loadImg(src(spot,pcEra));}catch(e){return;}
+  const e=ERAS[pcEra];
+  c.textBaseline="alphabetic";c.fillStyle="#f2ebdf";c.fillRect(0,0,W,H);
+  const bx=56,by=56,bw=W-112,bh=880,r=Math.max(bw/img.width,bh/img.height),sw=bw/r,sh=bh/r;
+  c.drawImage(img,(img.width-sw)/2,(img.height-sh)/2,sw,sh,bx,by,bw,bh);
+  const grd=c.createLinearGradient(0,by,0,by+260);grd.addColorStop(0,"rgba(0,0,0,.5)");grd.addColorStop(1,"rgba(0,0,0,0)");c.fillStyle=grd;c.fillRect(bx,by,bw,260);
+  c.textAlign="left";c.fillStyle="#fff";c.font='130px "Do Hyeon", sans-serif';c.fillText(e.y,bx+36,by+150);
+  c.font='40px "Do Hyeon", sans-serif';c.fillText(e.n,bx+40,by+205);
+  c.textAlign="right";c.font='500 22px "Gothic A1", sans-serif';c.fillStyle="rgba(255,255,255,.92)";c.shadowColor="rgba(0,0,0,.6)";c.shadowBlur=8;
+  c.fillText("AI 생성 이미지",bx+bw-22,by+bh-24);c.shadowBlur=0;
+  c.textAlign="left";c.fillStyle="#2a211a";c.font='60px "Do Hyeon", sans-serif';
+  wrapText(c,($("pcMsg").value.trim()||e.cap),bx+6,1040,700,74,2);
+  c.font='500 26px "Gothic A1", sans-serif';c.fillStyle="#7a6a5a";c.fillText(`해방촌 신흥시장 · ${SPOTS[spot].name}`,bx+6,1250);
+  // 소인
+  c.save();c.translate(912,1112);c.rotate(-.18);c.strokeStyle="#c0603f";c.fillStyle="#c0603f";c.lineWidth=5;c.setLineDash([10,7]);
+  c.beginPath();c.arc(0,0,98,0,Math.PI*2);c.stroke();c.setLineDash([]);c.lineWidth=2;c.beginPath();c.arc(0,0,82,0,Math.PI*2);c.stroke();
+  c.textAlign="center";c.font='34px "Do Hyeon", sans-serif';c.fillText("신흥시장",0,-16);
+  c.font='500 36px "IBM Plex Mono", monospace';c.fillText(e.y,0,26);
+  c.font='500 15px "IBM Plex Mono", monospace';c.fillText(foundCount()===15?"EXPLORER 15/15":"HAEBANGCHON",0,56);c.restore();
+}
+$("pcSave").onclick=async()=>{
+  if(pcBusy)return;pcBusy=true;const st=$("pcStatus");st.textContent="엽서를 만드는 중이에요…";
+  try{
+    await drawCard();const cv=$("pcCanvas");
+    const blob=await new Promise(r=>cv.toBlob(r,"image/png"));
+    const name=`shinheung-${SPOTS[spot].key}-${ERAS[pcEra].y}.png`;
+    if(downloads&&blob){
+      try{await downloads.save({filename:name,data:blob});st.textContent="저장했어요. 인스타그램에 올려 보세요!";}
+      catch(err){const c=err&&err.code;
+        if(c==="declined")st.textContent="저장을 취소했어요.";
+        else if(c==="rate_limited")st.textContent="잠시 후 다시 눌러 주세요.";
+        else showPcImage(cv);}
+    } else if(!(window.claude&&window.claude.use)&&blob){
+      const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(u),4000);
+      st.textContent="저장했어요. 다운로드 폴더나 사진 앱을 확인해 보세요.";
+    } else showPcImage(cv);
+  }catch(e){st.textContent="엽서를 만들지 못했어요. 다시 눌러 주세요.";}
+  pcBusy=false;
+};
+function showPcImage(cv){const i=$("pcImg");i.src=cv.toDataURL("image/png");i.hidden=false;cv.hidden=true;
+  $("pcStatus").textContent="엽서 이미지를 길게 누르거나 우클릭해서 저장하세요.";}
+
+/* ── 소원 벽 (공유 저장소) ── */
+let db=null,me=null,uid=null,wishDocs=[],canWrite=true,owner=false;
+function hashPos(id){let h=2166136261;for(const ch of id){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}
+  const a=(h>>>0)/4294967295,b=((Math.imul(h,2654435761)>>>0)%10000)/10000;return [8+a*84,7+b*46];}
+function renderWishLights(){
+  const box=$("wishes");box.innerHTML="";
+  if(era!==4||comparing||hunting)return;
+  wishDocs.slice(0,30).forEach(d=>{const t=d.text;const [x,y]=hashPos(d.id);
+    const b=document.createElement("button");b.className="wl";b.style.left=x+"%";b.style.top=y+"%";b.style.animationDelay=(x%3).toFixed(2)+"s";
+    b.setAttribute("aria-label","2056에 바라는 소원 보기");
+    b.onclick=()=>{stopAuto();$("popT").textContent="2056에 바라는 것";$("popB").textContent=t;$("pop").hidden=false;};box.appendChild(b);});
+}
+function renderWishList(){
+  const ul=$("wishList");ul.innerHTML="";
+  if(!wishDocs.length){const li=document.createElement("li");li.textContent="아직 켜진 소원이 없어요. 첫 번째 불을 밝혀 주세요.";li.style.borderLeftColor="var(--line)";ul.appendChild(li);return;}
+  wishDocs.forEach(d=>{const li=document.createElement("li");const sp=document.createElement("span");sp.textContent=d.text;li.appendChild(sp);
+    if(me&&((uid&&d.id===uid)||owner)){const del=document.createElement("button");del.textContent=d.id===uid?"내 소원 지우기":"지우기";
+      del.onclick=async()=>{try{await db.doc("wishes/"+d.id).delete();if(d.id===uid){$("wishText").value="";updWishCount();$("wishBtn").textContent="불 밝히기";}}catch(e){$("wishMsg").textContent="지우지 못했어요. 잠시 후 다시 시도해 주세요.";}};
+      li.appendChild(del);}
+    ul.appendChild(li);});
+}
+function updWishCount(){$("wishCount").textContent=`${$("wishText").value.length} / 60`;}
+$("wishText").addEventListener("input",updWishCount);
+$("wishForm").addEventListener("submit",async ev=>{
+  ev.preventDefault();const text=$("wishText").value.trim();const msg=$("wishMsg");
+  if(text.length<2){msg.textContent="두 글자 이상 적어 주세요.";return;}
+  if(!db||!uid||!canWrite)return;
+  $("wishBtn").disabled=true;msg.textContent="";
+  try{await db.doc("wishes/"+uid).set({text,at:Date.now()});msg.textContent="2056년의 골목에 불이 켜졌어요. 2056 장면에서 확인해 보세요.";$("wishBtn").textContent="소원 고치기";}
+  catch(e){if(e&&e.code==="invalid_argument"){canWrite=false;$("wishForm").hidden=true;msg.textContent="이 화면에서는 소원을 읽을 수만 있어요.";}
+    else if(e&&e.code==="quota_exceeded")msg.textContent="소원 벽이 가득 찼어요.";
+    else msg.textContent="저장하지 못했어요. 잠시 후 다시 눌러 주세요.";}
+  $("wishBtn").disabled=false;
+});
+async function initCaps(){
+  const C=window.claude;if(!C||!C.use){$("wishCard").hidden=true;return;}
+  C.use("downloads").then(d=>{downloads=d;}).catch(()=>{});
+  try{[db,me]=await Promise.all([C.use("db"),C.use("user")]);}catch(e){}
+  if(!db){$("wishMsg").textContent="소원 벽은 claude.ai에 로그인한 방문자에게 보여요.";renderWishList();return;}
+  db.collection("wishes").orderBy("at","desc").limit(100).onSnapshot(snap=>{
+    wishDocs=snap.docs.map(d=>{const v=d.data()||{};return{id:d.id,text:String(v.text||"").slice(0,60)};}).filter(d=>d.text);
+    renderWishList();renderWishLights();
+    const mine=wishDocs.find(d=>d.id===uid);if(mine&&!$("wishText").value){$("wishText").value=mine.text;updWishCount();$("wishBtn").textContent="소원 고치기";}
+  },()=>{$("wishMsg").textContent="소원 벽을 불러오지 못했어요.";});
+  try{uid=me?await me.id():null;}catch(e){uid=null;}
+  try{owner=me?!!(await me.isOwner()):false;}catch(e){owner=false;}
+  renderWishList();
+  let cw=null;try{cw=me?await me.can("data.write"):null;}catch(e){cw=null;}
+  if(uid&&cw!==false){$("wishForm").hidden=false;}
+  else $("wishMsg").textContent="소원은 이 페이지를 함께 쓰는 사람만 남길 수 있어요. 남겨진 소원은 누구나 볼 수 있어요.";
+}
+
+/* ── 시작 ── */
+SPOTS.forEach((_,s)=>ERAS.forEach((_,e)=>{const i=new Image();i.src=src(s,e);}));
+$("imgA").src=src(0,0);$("imgA").alt=`${SPOTS[0].name}, 1950년`;$("imgA").classList.add("kb");
+render();renderWishList();initCaps();
+</script>
+
+</body>
+</html>
